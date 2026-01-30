@@ -15,7 +15,7 @@ Prerequisites
 You need Python 3.8+ installed.
 1. Clone the repository
 In Bash
-git clone https://github.com/Saikalash/Salary-prediction.git
+git clone 
 cd Salary-prediction
 2. Install Dependencies
 Install the necessary libraries using pip and the requirements.txt file (you may need to create this file, listing pandas, numpy, scikit-learn, and matplotlib).Bashpip install pandas numpy scikit-learn matplotlib seaborn
