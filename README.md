@@ -1,118 +1,676 @@
-# Salary Prediction System
+# 💰 Salary Prediction System
 
-A supervised regression project (Python, pandas, scikit-learn, Flask) that predicts salary from age, gender, education level, job title and years of experience. It covers the full workflow: data cleaning, EDA, feature engineering, three-model comparison with cross-validation and GridSearchCV, held-out evaluation, feature-importance analysis, model persistence and a small web demo.
+<p align="center">
 
-## Dataset and attribution
+  <img src="https://img.shields.io/badge/Python-3.x-blue?logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/Flask-REST%20API-black?logo=flask&logoColor=white" />
+  <img src="https://img.shields.io/badge/scikit--learn-Machine%20Learning-orange?logo=scikit-learn&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tests-30%20Passed-success" />
+  <img src="https://img.shields.io/badge/Model-Gradient%20Boosting-blueviolet" />
 
-`data/raw/Salary_Data.csv` - 6,704 rows, 6 columns (`Age, Gender, Education Level, Job Title, Years of Experience, Salary`).
+</p>
 
-- **Source:** the public Kaggle dataset *Salary_Data* by **mohithsairamreddy** - https://www.kaggle.com/datasets/mohithsairamreddy/salary-data. Its page describes the data as 6,704 points collected from surveys, job-posting sites and other public sources.
-- The bundled copy was downloaded unchanged from a public GitHub mirror (https://github.com/Ravi506051/Salary_Prediction-main).
-- **Licence / provenance:** not verified here. Check the Kaggle page before publishing this repository; if redistribution is not allowed, delete the CSV and download it yourself to the same path. The Kaggle description is also inconsistent about whether `Salary` is monthly or annual (values look annual), so this project treats salaries as relative "dataset units".
+<p align="center">
+  <b>An end-to-end machine learning application for predicting employee salary from professional and demographic attributes.</b>
+</p>
 
-### Data quality (important)
+---
 
-| Issue | Handling |
-| --- | --- |
-| 4,912 of 6,704 rows are **exact duplicates** (only ~1,790 unique rows) | Dropped **before** the train/test split so identical rows cannot appear on both sides |
-| 5 rows without a salary | Dropped (nothing to learn from) |
-| 4 salaries of 350-579 (next lowest is 25,000) | Dropped as implausible (< 10,000) |
-| Inconsistent education labels ("Bachelor's" vs "Bachelor's Degree", "phD") | Normalised to High School / Bachelor's / Master's / PhD |
-| 1 row with missing education | Kept; imputed with the mode inside the pipeline |
-| 192 distinct job titles, most with few rows | Rare titles grouped (< 5 rows) + a title-seniority feature |
+## 📌 Overview
 
-Result: **1,783 clean unique rows** (1,426 train / 357 test). Counts are in `reports/data_cleaning.json`.
+The **Salary Prediction System** is a machine learning application that estimates an employee's salary using:
 
-Even after removing exact duplicates, 19% of test rows have a training row with identical features (and a different salary), which makes the held-out score somewhat optimistic; see Results.
+- Age
+- Gender
+- Education Level
+- Job Title
+- Years of Experience
 
-## Pipeline
+The project follows a complete ML pipeline:
 
+```text
+Raw Dataset
+     ↓
+Data Cleaning
+     ↓
+Feature Engineering
+     ↓
+Train / Test Split
+     ↓
+Preprocessing
+     ↓
+Model Comparison
+     ↓
+Hyperparameter Tuning
+     ↓
+Best Model Selection
+     ↓
+Evaluation
+     ↓
+Saved ML Pipeline
+     ↓
+Flask Web Application
+     ↓
+Salary Prediction
 ```
-raw CSV -> clean (labels, missing, implausible, de-duplicate) -> 80/20 split (random_state=42)
- saved sklearn Pipeline:
-   feature engineering (Experience_Squared, Career_Stage, Title_Level from job-title keywords)
-   -> numeric: median impute + scale | education: ordered encoding (High School < ... < PhD)
-      gender/seniority/career stage: one-hot | job title: one-hot, rare titles grouped
-   -> model
- for each of Linear Regression / Random Forest / Gradient Boosting:
-   5-fold shuffled CV with the original fixed settings, and GridSearchCV (same folds)
- lowest tuned CV RMSE wins -> evaluated ONCE on the held-out test split
- -> permutation importance, bootstrap confidence intervals, figures, saved model + metadata
+
+The system compares multiple regression algorithms and automatically selects the best-performing model using cross-validation.
+
+---
+
+# 🚀 Key Features
+
+### 🧹 Data Cleaning
+- Normalizes column names and categorical values
+- Removes missing target values
+- Removes implausible salary values
+- Removes exact duplicate records
+- Handles missing feature values through preprocessing
+
+### 🧠 Feature Engineering
+
+Additional features are derived from the original dataset, including:
+
+- `Experience_Squared`
+- `Career_Stage`
+- `Title_Level`
+
+These features help the models capture nonlinear relationships and seniority information.
+
+### ⚙️ Automated Preprocessing
+
+The project uses `ColumnTransformer` and separate preprocessing pipelines for numerical and categorical features.
+
+**Numerical features:**
+
+```text
+Median Imputation
+      ↓
+Standard Scaling
 ```
 
-Because feature engineering is part of the saved pipeline, prediction takes raw columns and cannot drift from training.
+**Categorical features:**
 
-## Results (real data; `python -m src.train`)
+```text
+Categorical Imputation
+      ↓
+Encoding
+      ↓
+Model
+```
 
-5-fold CV on the 1,426 training rows (mean):
+Job titles are handled as high-cardinality categorical features, with infrequent categories grouped to reduce overfitting.
 
-| Model | RMSE, original settings | RMSE, GridSearchCV-tuned | MAE (tuned) | R2 (tuned) |
-| --- | --- | --- | --- | --- |
-| Linear Regression | 18,105 | 18,105 (nothing to tune) | 13,141 | 0.874 |
-| Random Forest | 15,978 | 14,962 | 9,959 | 0.914 |
-| **Gradient Boosting (selected)** | 16,906 | **14,441** | **9,551** | **0.920** |
+### 🤖 Multiple ML Models
 
-Tuning helped (about 6% lower RMSE for Random Forest, 15% for Gradient Boosting). Tuned CV scores are slightly optimistic because the same folds choose the settings. The Gradient Boosting grid was widened once (before the final run) after the best CV setting sat on the edge of the first grid; search spaces are in `src/models.py`. Selected: `learning_rate=0.2, max_depth=4, min_samples_leaf=1, n_estimators=300`.
+The project compares:
 
-**Held-out test set (357 rows, used once):**
+- Linear Regression
+- Random Forest
+- Gradient Boosting
 
-| Metric | Value | 95% bootstrap CI |
-| --- | --- | --- |
-| RMSE | 14,942 | 12,602 - 17,219 |
-| MAE | 9,398 | |
-| R2 | 0.918 | 0.887 - 0.942 |
+Hyperparameters are optimized using:
 
-Always predicting the training mean gives RMSE 52,068 and R2 0.000 on the same rows.
+```text
+GridSearchCV
+```
 
-**Stricter check:** because 19% of test rows share identical features with a training row, the selected model was also scored with *grouped* 5-fold CV on the training split (identical-feature rows kept together): RMSE 15,827, R2 0.904. Treat roughly **R2 0.90** as the more conservative estimate. All figures are in `reports/metrics.json`; exact values can shift slightly with other library versions. The numbers in this README and in `reports/` were produced with scikit-learn 1.8.0, pandas 3.0.2, numpy 2.4.4. A clean install of `requirements.txt` with scikit-learn 1.9.1 / pandas 3.0.6 gave identical Linear Regression and Random Forest scores and the same selected model, but slightly different Gradient Boosting results (tuned CV RMSE 14,402; test RMSE 14,689, MAE 9,294, R2 0.920; grouped-CV R2 0.911). Differences of this size are version noise, not a change in conclusions.
+The model with the best cross-validation RMSE is selected automatically.
 
-### Feature importance (permutation, test set; RMSE increase when a column is shuffled)
+### 💾 Model Persistence
 
-Years_of_Experience 48.8k, Job_Title 20.2k, Age 7.2k, Education_Level 3.2k, Gender 0.1k (std 0.1k). Age and experience are strongly correlated (r = 0.94), so importance is shared between them and Age is understated. The model barely relies on gender; the raw median gap between genders in the data is descriptive and is not controlled for experience, education or title, so it is not evidence of a causal effect.
+The complete preprocessing + model pipeline is saved using **Joblib**.
 
-![importance](reports/figures/feature_importance.png)
+This ensures that the same transformations used during training are also used during prediction.
 
-### EDA highlights (`python -m src.eda`, figures in `reports/figures/`)
+### 🌐 Flask Web Application
 
-Salary correlates with years of experience (r = 0.82) and age (0.77). Median salary rises with education (High School 35k, Bachelor's 80k, Master's 127k, PhD 170k) and with title seniority (Junior 40k, Standard 95k, Manager 125k, Senior 145k, Director 160k). These are descriptive statistics, not causal effects.
+A Flask application provides:
 
-![experience](reports/figures/salary_vs_experience.png) ![education](reports/figures/salary_by_education.png)
-![compare](reports/figures/model_comparison.png) ![pred](reports/figures/predicted_vs_actual.png)
+- Interactive web interface
+- Salary prediction
+- Input validation
+- Training-range warnings
+- Prediction API
+- Health-check endpoint
 
-## Limitations
+---
 
-- The data are a public, partly duplicated file of unclear provenance; results show the pipeline works on this data, not that it predicts real-world pay.
-- Salary units are unclear; no currency or period is claimed.
-- Titles not in the training data are handled approximately (seniority keywords, experience, age); the web demo warns in that case. Inputs outside age 21-62 or 0-34 years of experience are extrapolation (tree models flatten out).
-- Near-identical rows mean even the held-out score is somewhat optimistic (see grouped CV above).
-- Rare gender category "Other" has only 7 rows.
+# 🏗️ Project Architecture
 
-## Setup and usage
+```text
+                         ┌─────────────────────┐
+                         │   Salary Dataset    │
+                         │   Salary_Data.csv   │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │    Data Loader      │
+                         │   data_loader.py    │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │ Feature Engineering │
+                         │ feature_engineering │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │ Train / Test Split  │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                 ┌────────────────────────────────────┐
+                 │       Preprocessing Pipeline       │
+                 │                                    │
+                 │ Numeric → Imputation → Scaling    │
+                 │ Categorical → Encoding             │
+                 └────────────────┬───────────────────┘
+                                  │
+                                  ▼
+              ┌──────────────────────────────────────────┐
+              │             Model Comparison             │
+              │                                          │
+              │ Linear Regression                        │
+              │ Random Forest                            │
+              │ Gradient Boosting                        │
+              └────────────────────┬─────────────────────┘
+                                   │
+                                   ▼
+                         ┌─────────────────────┐
+                         │    GridSearchCV     │
+                         │ Hyperparameter Tune │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │  Best Model        │
+                         │ Gradient Boosting  │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │ Saved ML Pipeline   │
+                         │ salary_pipeline     │
+                         │      .joblib        │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │   Flask Application │
+                         │      app.py         │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │  Salary Prediction  │
+                         └─────────────────────┘
+```
+
+---
+
+# 📂 Project Structure
+
+```text
+Salary-Prediction-Final/
+│
+├── app.py
+├── requirements.txt
+├── README.md
+│
+├── data/
+│   └── raw/
+│       └── Salary_Data.csv
+│
+├── models/
+│   └── salary_pipeline.joblib
+│
+├── reports/
+│   ├── metrics.json
+│   └── ...
+│
+├── src/
+│   ├── config.py
+│   ├── data_loader.py
+│   ├── feature_engineering.py
+│   ├── preprocessing.py
+│   ├── models.py
+│   ├── model_loader.py
+│   ├── predict.py
+│   ├── train.py
+│   ├── eda.py
+│   └── reporting.py
+│
+├── tests/
+│   └── test_salary.py
+│
+└── screenshots/
+    ├── salary-prediction-result.png
+    ├── salary-predictor-interface.png
+    └── tests-passed.png
+```
+
+---
+
+# 📊 Model Performance
+
+The final training run selected **Gradient Boosting** as the best-performing model.
+
+| Metric | Result |
+|---|---:|
+| Selected Model | Gradient Boosting |
+| Test Samples | 357 |
+| RMSE | 14,689 |
+| MAE | 9,294 |
+| R² | 0.920 |
+
+### What these metrics mean
+
+**MAE — 9,294**
+
+On average, the prediction differs from the actual salary by approximately 9,294 salary units.
+
+**RMSE — 14,689**
+
+RMSE gives more weight to larger prediction errors, making it useful for evaluating whether the model occasionally makes large mistakes.
+
+**R² — 0.920**
+
+The model explains approximately 92% of the variance in the held-out test data.
+
+> Note: The dataset's salary units are not clearly documented, so the predictions should be interpreted as statistical estimates rather than financial advice.
+
+---
+
+# 🧪 Testing
+
+The project includes automated tests covering:
+
+- Data loading
+- Data cleaning
+- Feature engineering
+- Preprocessing
+- Model training
+- Model selection
+- Prediction validation
+- Model persistence
+- Reproducibility
+- Flask endpoints
+
+The final local test run:
+
+```text
+30 passed in 29.35s
+```
+
+### Test Result
+
+![Tests Passed](screenshots/tests-passed.png)
+
+---
+
+# 🖥️ Web Application
+
+The project provides a Flask-based web interface where users can enter:
+
+- Age
+- Gender
+- Education Level
+- Job Title
+- Years of Experience
+
+and receive a predicted salary.
+
+### Application Interface
+
+![Salary Predictor Interface](screenshots/salary-predictor-interface.png)
+
+---
+
+# 💰 Example Prediction
+
+Example input:
+
+```text
+Age: 32
+Gender: Male
+Education: Master's
+Job Title: Data Analyst
+Years of Experience: 5
+```
+
+Example prediction:
+
+```text
+Predicted Salary: 106,878
+```
+
+### Prediction Result
+
+![Salary Prediction Result](screenshots/salary-prediction-result.png)
+
+> The values shown in the screenshots are sample inputs used to demonstrate the application and do not represent a real employee.
+
+---
+
+# 🔌 REST API
+
+The Flask application exposes REST endpoints.
+
+### Health Check
+
+```http
+GET /api/health
+```
+
+Example response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### Prediction
+
+```http
+POST /api/predict
+```
+
+Example request:
+
+```json
+{
+  "Age": 32,
+  "Gender": "Male",
+  "Education_Level": "Master's",
+  "Job_Title": "Data Analyst",
+  "Years_of_Experience": 5
+}
+```
+
+Example response:
+
+```json
+{
+  "predicted_salary": 106878,
+  "typical_error_mae": 9294,
+  "model": "gradient_boosting",
+  "warnings": []
+}
+```
+
+---
+
+# ⚙️ Installation
+
+## 1. Clone the repository
 
 ```bash
-python -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-
-python -m src.eda        # data-quality report + EDA figures      (seconds)
-python -m src.train      # tune, compare, evaluate, save model     (a few minutes on one CPU core)
-python app.py            # web demo at http://127.0.0.1:5000
-pytest                   # tests (about 30 s)
-
-python -m src.predict --age 32 --gender Male --education "Master's" --job-title "Data Scientist" --years 6
+git clone https://github.com/kethan1906/salary-prediction.git
+cd salary-prediction
 ```
 
-`models/` is generated (git-ignored); run `python -m src.train` first. The saved `.joblib` is tied to the scikit-learn version recorded in `models/model_metadata.json`; retrain after upgrading, and only load model files you trained yourself.
+## 2. Create a virtual environment
 
-Web API: `GET /api/options`, `POST /api/predict` (JSON with `Age, Gender, Education_Level, Job_Title, Years_of_Experience`), `GET /api/health`. Invalid input returns HTTP 400 with an error message.
+### Windows
 
-## Layout
-
+```bash
+py -m venv venv
 ```
-src/   config, data_loader, feature_engineering, preprocessing, models, train, eda,
-       reporting, predict, model_loader
-app.py templates/ static/        web demo
-tests/                           30+ tests (cleaning, features, training, prediction, API)
-reports/                         metrics.json, model_comparison.csv, feature_importance.csv,
-                                 data_cleaning.json, eda_summary.json, figures/
-data/raw/Salary_Data.csv  data/README.md
+
+Activate it:
+
+```bash
+venv\Scripts\activate
 ```
+
+## 3. Install dependencies
+
+```bash
+py -m pip install -r requirements.txt
+```
+
+---
+
+# 🏋️ Train the Model
+
+Run:
+
+```bash
+py -m src.train
+```
+
+This will:
+
+1. Load the dataset
+2. Clean the data
+3. Engineer features
+4. Split the dataset
+5. Build preprocessing pipelines
+6. Train candidate models
+7. Perform hyperparameter tuning
+8. Select the best model
+9. Evaluate the final model
+10. Save the trained pipeline
+
+The trained model is saved as:
+
+```text
+models/salary_pipeline.joblib
+```
+
+---
+
+# 🌐 Run the Application
+
+Start Flask:
+
+```bash
+py app.py
+```
+
+Open:
+
+```text
+http://127.0.0.1:5000
+```
+
+---
+
+# 🧪 Run Tests
+
+Run the complete test suite:
+
+```bash
+py -m pytest -q
+```
+
+Expected result:
+
+```text
+30 passed
+```
+
+---
+
+# 🧠 Machine Learning Pipeline
+
+The project uses a single end-to-end pipeline:
+
+```text
+Input Data
+    ↓
+Feature Engineering
+    ↓
+ColumnTransformer
+    ├── Numerical Features
+    │       ↓
+    │   Median Imputation
+    │       ↓
+    │   Scaling
+    │
+    └── Categorical Features
+            ↓
+        Imputation
+            ↓
+        Encoding
+    ↓
+Regression Model
+    ↓
+Predicted Salary
+```
+
+Keeping preprocessing and the model together is important because the exact same transformations are applied during both training and prediction.
+
+---
+
+# 🔍 Model Selection
+
+Three regression algorithms are evaluated:
+
+### Linear Regression
+
+Provides a simple baseline and assumes a relatively linear relationship between features and salary.
+
+### Random Forest
+
+Uses an ensemble of decision trees and can capture nonlinear relationships and feature interactions.
+
+### Gradient Boosting
+
+Builds trees sequentially, where each new tree attempts to improve the errors made by previous trees.
+
+The final system selected **Gradient Boosting** based on the lowest tuned cross-validation RMSE.
+
+---
+
+# 🛡️ Input Validation
+
+The application also performs validation before prediction.
+
+Examples include:
+
+- Invalid age values
+- Invalid experience values
+- Missing required fields
+- Unknown categorical values
+- Inputs outside the training range
+
+For example, if an age is outside the training range, the application can still provide an estimate but warns that the result is an extrapolation and may be unreliable.
+
+---
+
+# 📈 Data Quality
+
+The dataset initially contained:
+
+```text
+Raw rows:        6,704
+Clean rows:      1,783
+Training rows:   1,426
+Testing rows:      357
+```
+
+The cleaning process removed:
+
+- Missing salary records
+- Implausible salary values
+- Exact duplicate records
+
+Deduplication is performed before the train/test split to reduce the possibility of identical records appearing in both datasets.
+
+---
+
+# 🧰 Technologies Used
+
+| Technology | Purpose |
+|---|---|
+| Python | Core programming language |
+| Pandas | Data manipulation |
+| NumPy | Numerical operations |
+| Scikit-learn | Machine learning |
+| Flask | Web application / REST API |
+| Joblib | Model serialization |
+| Pytest | Automated testing |
+| HTML/CSS | Frontend interface |
+
+---
+
+# 💡 Why This Project?
+
+This project demonstrates an end-to-end machine learning workflow rather than only training a model in a notebook.
+
+It covers:
+
+```text
+Data
+ ↓
+Cleaning
+ ↓
+Feature Engineering
+ ↓
+Preprocessing
+ ↓
+Model Training
+ ↓
+Hyperparameter Tuning
+ ↓
+Evaluation
+ ↓
+Model Persistence
+ ↓
+REST API
+ ↓
+Web Application
+ ↓
+Testing
+```
+
+This makes the project suitable for demonstrating practical machine learning and software engineering concepts.
+
+---
+
+# 🎯 Interview Highlights
+
+The most important concepts demonstrated in this project are:
+
+- Supervised learning
+- Regression
+- Feature engineering
+- Train/test splitting
+- Cross-validation
+- GridSearchCV
+- RMSE
+- MAE
+- R²
+- ColumnTransformer
+- One-hot encoding
+- Ordinal encoding
+- Imputation
+- Feature scaling
+- Random Forest
+- Gradient Boosting
+- Model persistence
+- Joblib
+- Flask
+- REST APIs
+- Input validation
+- Automated testing
+- ML pipeline design
+
+---
+
+# 👨‍💻 Author
+
+**Kethan**
+
+Software Engineering & Machine Learning Projects
+
+---
+
+<p align="center">
+  ⭐ If you found this project useful, consider giving the repository a star!
+</p>
