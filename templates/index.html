@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Salary Predictor</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main>
+    <h1>Salary Predictor</h1>
+    <p class="sub">Estimate a salary from age, gender, education, job title and experience.</p>
+
+    <div id="status" class="notice" hidden></div>
+
+    <form id="form" autocomplete="off">
+      <label>Age <input id="age" type="number" min="16" max="80" step="1" required></label>
+      <label>Gender <select id="gender" required></select></label>
+      <label>Education level <select id="education" required></select></label>
+      <label>Job title
+        <input id="title" list="titles" maxlength="100" required placeholder="e.g. Data Scientist">
+        <datalist id="titles"></datalist>
+      </label>
+      <label>Years of experience <input id="years" type="number" min="0" max="60" step="0.5" required></label>
+      <button type="submit">Predict salary</button>
+    </form>
+
+    <section id="result" hidden>
+      <div class="big" id="amount"></div>
+      <p id="error-range"></p>
+      <ul id="warnings"></ul>
+    </section>
+
+    <p class="foot">Trained on a public salary dataset (see README). Estimates are statistical, not
+    advice; the dataset's salary units are not clearly documented, so treat values as relative.</p>
+  </main>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
