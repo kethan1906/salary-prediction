@@ -633,35 +633,6 @@ This makes the project suitable for demonstrating practical machine learning and
 
 ---
 
-# 🎯 Interview Highlights
-
-The most important concepts demonstrated in this project are:
-
-- Supervised learning
-- Regression
-- Feature engineering
-- Train/test splitting
-- Cross-validation
-- GridSearchCV
-- RMSE
-- MAE
-- R²
-- ColumnTransformer
-- One-hot encoding
-- Ordinal encoding
-- Imputation
-- Feature scaling
-- Random Forest
-- Gradient Boosting
-- Model persistence
-- Joblib
-- Flask
-- REST APIs
-- Input validation
-- Automated testing
-- ML pipeline design
-
----
 
 # 👨‍💻 Author
 
